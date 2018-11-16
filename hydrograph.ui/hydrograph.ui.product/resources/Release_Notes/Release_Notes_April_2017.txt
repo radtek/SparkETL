@@ -1,0 +1,18 @@
+====================================================================================================
+Features Added:
+=====================================================================================================
+Sr.No. <date> - [developer names] - description
+
+=====================================================================================================
+Issues/Defects fixed:
+=====================================================================================================
+Sr.No. <GitHub Issue #>  - [fixed by] - description
+1. <> - [Vibhor Tyagi] - Subjob issue : Subjob was not getting imported.
+2. <> - [Prateem] - .job file size mismatch when components from one file copied to other file.
+3. <> - [Pooja Yadav] - Count field of Limit component is converting a negative value into parameterization format.
+4. <> - [Pooja Yadav] - Run Config : - Tool shows error for unused field.
+5. <> - [Pooja Yadav] - Run configuration dialog defaults to ‘Remote’ and ‘Key file’. It should ideally be ‘Local’ and ‘Password’.
+6. <> - [Vibhor Tyagi]- View Execution Tracking History : Incorrect popup File not exists is getting displayed
+7. <> - [Vibhor Tyagi]-Execution Tracking: Track subjob shows previous job tracking status on a component
+8. <> - [Sonia Raheja] - Unique sequence component: Getting error pop on a Data Viewer window.
+9. <> - [Sonia Raheja] - DB Update component: Job getting failed "ClassNotFound" exception.

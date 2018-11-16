@@ -1,0 +1,806 @@
+/********************************************************************************
+ * Copyright 2017 Capital One Services, LLC and Bitwise, Inc.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ ******************************************************************************/
+
+apply plugin: 'java'
+apply from: "common.gradle"
+sourceCompatibility = 1.8   // Hydrograph Java compatibility
+version = '1.0'				// The version is used to create project jar version number
+
+
+
+/*
+-------------------------------------------------------------------------------------------------
+									 Repository Section 
+-------------------------------------------------------------------------------------------------
+*/
+repositories {  
+		mavenLocal()
+		maven{	url AWUrl }
+   		maven{	url BWUrl }
+		maven{  url RedShiftUrl }
+}
+/*
+-------------------------------------------------------------------------------------------------
+					       			Configuration Section 
+-------------------------------------------------------------------------------------------------
+*/
+configurations {
+    sshAntTask
+    compile
+}
+sourceSets {
+    main {
+        java.srcDir 'src/main/java'
+    }
+}
+configurations.all {
+    // Check for updates every build
+    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+}
+
+configurations {
+    compile {
+        transitive = false
+    }
+}
+
+/*
+-------------------------------------------------------------------------------------------------
+Read project's build.properties file and get the configuration details required for job execution 
+-------------------------------------------------------------------------------------------------
+*/
+	Properties properties = new Properties()
+	def buildProperty = project.projectDir.path + '/build.properties'
+	File propertiesFile = new File(buildProperty)
+	propertiesFile.withInputStream {
+    properties.load(propertiesFile.newDataInputStream())
+}
+/*
+-------------------------------------------------------------------------------------------------
+                                        Dependency Section 
+-------------------------------------------------------------------------------------------------
+*/
+dependencies {
+
+	sshAntTask (group: 'org.apache.ant', name: 'ant-jsch',version:'1.9.4')
+	
+  		compile(group: 'hydrograph', name: 'hydrograph.engine.plugin', version: '0.1.spark')
+  		
+  		compile(group: 'hydrograph', name: 'hydrograph.engine.command-line', version: '0.1.spark')
+
+    	compile(group: 'org.jgrapht', name: 'jgrapht-ext', version: '0.9.1')
+    
+    	compile(group: 'hydrograph', name: 'hydrograph.server.execution.tracking.server', version: '1.0.13')
+    	
+    	compile(group: 'oracle', name: 'ojdbc6', version: '11.2.0.4')
+    	
+    	compile(group: 'mysql', name: 'mysql-connector-java', version: '5.1.34')
+    	
+    	compile(group: 'com.amazon.redshift', name: 'redshift-jdbc42', version: '1.2.1.1001')
+    	
+    	compile(group: 'teraData', name: 'terajdbc4', version: '0.1')
+		
+		compile(group: 'teraData', name: 'tdgssconfig', version: '0.1')
+		
+		compile(group: 'hydrograph', name: 'hydrograph.engine.transformation', version: '0.1.spark')
+		compile(group: 'hydrograph', name: 'hydrograph.engine.spark', version: '0.1.spark')
+		compile(group: 'hydrograph', name: 'hydrograph.engine.core', version: '0.1.spark')
+		compile(group: 'hydrograph', name: 'hydrograph.engine.expression', version: '0.1.spark')
+
+		
+		//plugin
+		compile 'org.slf4j:slf4j-api:1.7.12'
+		compile 'org.slf4j:slf4j-log4j12:1.7.12'
+   
+		//Common
+		compile 'commons-lang:commons-lang:2.6'
+		compile 'commons-cli:commons-cli:1.2'
+		compile 'com.fasterxml.jackson.core:jackson-annotations:2.6.5'
+		compile 'com.fasterxml.jackson.core:jackson-core:2.6.5'
+		compile 'com.fasterxml.jackson.core:jackson-databind:2.6.5'
+
+		//expression
+		compile group: 'org.scala-lang', name: 'scala-library', version: '2.11.8'
+		compile group: 'org.antlr', name: 'antlr4-runtime', version: '4.5.1'
+		compile group: 'org.antlr', name: 'antlr-runtime', version: '3.4'
+		compile group: 'org.beanshell', name: 'bsh', version: '1.3.0'
+		compile group: 'org.codehaus.janino', name: 'janino', version: '3.0.6'
+		compile group: 'org.codehaus.janino', name: 'commons-compiler', version: '3.0.6'
+	
+		//Config
+		compile 'log4j:log4j:1.2.17'
+		compile 'org.apache.spark:spark-core_2.11:2.0.2'
+		compile  'org.apache.spark:spark-sql_2.11:2.0.2'
+    
+		testCompile 'junit:junit:4.12'
+		testCompile 'org.hamcrest:hamcrest-core:1.3'
+
+        //Logging Jars
+		compile 'org.slf4j:slf4j-api:1.7.21'
+		compile group: 'log4j', name: 'log4j', version: '1.2.17'
+        compile group: 'commons-logging', name: 'commons-logging', version: '1.2'
+
+
+        // Scala Jars
+        compile group: 'org.scala-lang', name: 'scala-reflect', version: '2.11.8'
+        compile group: 'org.scalatest', name: 'scalatest_2.11', version: '2.2.6'
+        compile group: 'org.scala-lang.modules', name: 'scala-xml_2.11', version: '1.0.2'
+
+
+        // Spark Jars
+        compile group: 'org.apache.spark', name: 'spark-sql_2.11', version: '2.0.2'
+        compile group: 'org.apache.spark', name: 'spark-core_2.11', version: '2.0.2'
+        compile group: 'org.apache.spark', name: 'spark-catalyst_2.11', version: '2.0.2'
+        compile group: 'org.apache.spark', name: 'spark-hive_2.11', version: '2.0.2'
+        compile group: 'com.databricks', name: 'spark-redshift_2.11', version: '2.0.1'
+        compile group: 'org.apache.spark', name: 'spark-unsafe_2.11', version: '2.0.2'
+        compile group: 'org.apache.spark', name: 'spark-network-common_2.11', version: '2.0.2'
+        compile group: 'org.apache.spark', name: 'spark-tags_2.10', version: '2.0.2'
+        compile group: 'org.apache.spark', name: 'spark-launcher_2.11', version: '2.0.2'
+        compile group: 'org.apache.spark', name: 'spark-network-shuffle_2.11', version: '2.0.2'
+
+        // avro Jars
+        //compile group: 'org.apache.avro', name: 'avro', version: '1.7.7'
+       // compile group: 'org.apache.avro', name: 'avro-mapred', version: '1.7.7',classifier: 'hadoop2'
+       
+        compile group: 'com.amazonaws', name: 'aws-java-sdk', version: '1.11.188'
+        compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.3.2'
+        compile group: 'org.fluttercode.datafactory', name: 'datafactory', version: '0.8'
+        compile group: 'commons-lang', name: 'commons-lang', version: '2.6'
+        compile group: 'org.beanshell', name: 'bsh', version: '1.3.0'
+        compile group: 'com.google.guava', name: 'guava', version: '16.0.1'
+        compile group: 'com.google.code.findbugs', name: 'jsr305', version: '3.0.0'
+        compile group: 'org.apache.commons', name: 'commons-csv', version: '1.4'
+
+        // json jars
+        compile group: 'org.json4s', name: 'json4s-native_2.11', version: '3.2.11'
+        compile group: 'org.json4s', name: 'json4s-jackson_2.11', version: '3.2.11'
+        compile group: 'org.json4s', name: 'json4s-ast_2.11', version: '3.2.11'
+        compile group: 'org.json4s', name: 'json4s-core_2.11', version: '3.2.11'
+        compile group: 'com.ibatis', name: 'ibatis-common', version: '1.3.1'
+        compile group: 'org.apache.ibatis', name: 'ibatis-sqlmap', version: '2.3.0'
+        compile group: 'com.univocity', name: 'univocity-parsers', version: '2.1.1'
+        compile group: 'com.esotericsoftware.kryo', name: 'kryo', version: '2.10'
+        compile group: 'org.apache.zookeeper', name: 'zookeeper', version: '3.4.5'
+		compile group: 'org.apache.hive', name: 'hive-serde', version: '2.0.1'
+
+        // Hadoop Jars
+        compile group: 'org.apache.hadoop', name: 'hadoop-aws', version: '2.7.2'
+        compile group: 'org.apache.hadoop', name: 'hadoop-common', version: '2.7.2'
+        compile group: 'org.apache.hadoop', name: 'hadoop-common', version: '2.7.2', classifier: 'tests'
+        compile group: 'org.apache.hadoop', name: 'hadoop-mapreduce-client-core', version: '2.7.2'
+        compile group: 'org.apache.hadoop', name: 'hadoop-auth', version: '2.7.2'
+        compile group: 'org.apache.hadoop', name: 'hadoop-annotations', version: '2.7.2'
+
+        // Parquet jars
+        compile group: 'org.apache.parquet', name: 'parquet-format', version: '2.3.0-incubating'
+        compile group: 'org.apache.parquet', name: 'parquet-common', version: '1.7.0'
+        compile group: 'org.apache.parquet', name: 'parquet-hadoop', version: '1.7.0'
+        compile group: 'org.apache.parquet', name: 'parquet-column', version: '1.7.0'
+        compile group: 'org.apache.parquet', name: 'parquet-hadoop', version: '1.7.0'
+        compile group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.6.5'
+        compile group: 'org.objenesis', name: 'objenesis', version: '2.1'
+		compile group: 'org.codehaus.jackson', name: 'jackson-core-asl', version: '1.9.13'
+        compile group: 'org.codehaus.jackson', name: 'jackson-mapper-asl', version: '1.9.13'
+        compile group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.6.6'
+        compile group: 'com.amazonaws', name: 'aws-java-sdk-core', version: '1.11.188'
+        compile group: 'com.google.protobuf', name: 'protobuf-java', version: '2.5.0'
+        compile group: 'com.amazonaws', name: 'aws-java-sdk-s3', version: '1.11.188'
+        compile group: 'com.fasterxml.jackson.module', name: 'jackson-module-scala_2.11', version: '2.6.5'
+        compile group: 'com.fasterxml.jackson.module', name: 'jackson-module-parameter-names', version: '2.6.5'
+        compile group: 'org.apache.xbean', name: 'xbean-asm5-shaded', version: '4.4'
+        compile group: 'net.jpountz.lz4', name: 'lz4', version: '1.3.0'
+        compile group: 'com.thoughtworks.paranamer', name: 'paranamer', version: '2.6'
+        compile group: 'com.fasterxml.jackson.module', name: 'jackson-module-paranamer', version: '2.6.5'
+        compile group: 'commons-configuration', name: 'commons-configuration', version: '1.6'
+        compile group: 'org.hamcrest', name: 'hamcrest-core', version: '1.1'
+        compile group: 'commons-collections', name: 'commons-collections', version: '3.2.2'
+       
+
+        // Hadoop Yarn Jars
+        compile group: 'org.apache.hadoop', name: 'hadoop-yarn-api', version: '2.2.0'
+        compile group: 'org.apache.hadoop', name: 'hadoop-yarn-server-nodemanager', version: '2.2.0'
+        compile group: 'org.apache.hadoop', name: 'hadoop-yarn-server-common', version: '2.2.0'
+        compile group: 'org.apache.hadoop', name: 'hadoop-yarn-client', version: '2.2.0'
+        compile group: 'org.apache.hadoop', name: 'hadoop-yarn-common', version: '2.2.0'
+        compile group: 'io.netty', name: 'netty-all', version: '4.0.29.Final'
+        compile group: 'com.twitter', name: 'chill_2.11', version: '0.8.0'
+        compile group: 'io.dropwizard.metrics', name: 'metrics-core', version: '3.1.2'
+        compile group: 'javax.ws.rs', name: 'javax.ws.rs-api', version: '2.0.1'
+
+        // JUnit Jars
+        testCompile group: 'junit', name: 'junit', version: '4.11'
+        
+        compile group: 'org.apache.avro', name: 'avro-ipc', version: '1.7.7'
+		compile group: 'com.databricks', name: 'spark-avro_2.11', version: '3.0.0'
+		compile group: 'commons-codec', name: 'commons-codec', version: '1.10'
+		compile group: 'org.apache.httpcomponents', name: 'httpcore', version: '4.4.4'
+    	compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.2'
+		compile group: 'net.java.dev.jets3t', name: 'jets3t', version: '0.9.0'
+		compile group: 'org.apache.derby', name: 'derby', version: '10.10.2.0'
+		compile group: 'cascading', name: 'lingual-hadoop2-mr1', version: '1.2.1', classifier:'jdbc'
+		compile group: 'javax.websocket', name: 'javax.websocket-api', version: '1.1' 
+		compile( group: 'org.apache.hadoop', name: 'hadoop-minicluster', version: hadoopVersion){
+   					exclude group: 'commons-beanutils'
+   					exclude group: 'commons-collections'
+				}
+		compile group: 'org.glassfish.tyrus', name: 'tyrus-server', version: '1.13.1'
+		compile group: 'com.google.code.gson', name: 'gson', version: '2.6.2'
+		compile group: 'org.glassfish.tyrus', name: 'tyrus-container-grizzly-server', version: '1.13.1'
+		compile group: 'org.glassfish.tyrus', name: 'tyrus-container-servlet', version: '1.13.1'
+		compile group: 'org.glassfish.tyrus', name: 'tyrus-client', version: '1.13.1'
+
+		compile (group: 'org.apache.hive', name: 'hive-exec', version: hiveVersion) {
+       			exclude group: 'com.google.guava'
+       			exclude group: 'org.apache.curator'
+       			exclude group: 'commons-beanutils'
+       			exclude group: 'commons-collections'
+  				 }
+   		compile group: 'joda-time', name: 'joda-time', version: '2.9.3'
+   		compile group: 'org.xerial.snappy', name: 'snappy-java', version: '1.1.2.6'
+   		compile group: 'org.apache.parquet', name: 'parquet-encoding', version: '1.7.0'
+   		compile group: 'org.slf4j', name: 'jul-to-slf4j', version: '1.7.16'
+		compile group: 'org.datanucleus', name: 'datanucleus-core', version: '3.2.10'
+		compile group: 'org.datanucleus', name: 'datanucleus-rdbms', version: '3.2.9'
+		compile group: 'org.datanucleus', name: 'datanucleus-api-jdo', version: '3.2.6'
+		compile group: 'javax.jdo', name: 'jdo-api', version: '3.0.1'	
+		compile group: 'org.apache.thrift', name: 'libfb303', version: '0.9.2'	
+		compile group: 'org.spark-project.hive', name: 'hive-metastore', version: '1.2.1.spark2'
+		compile group: 'org.apache.thrift', name: 'libthrift', version: '0.9.2'	
+		compile group: 'commons-configuration', name: 'commons-configuration', version: '1.6'
+		compile group: 'commons-io', name: 'commons-io', version: '2.4'
+		compile group: 'io.dropwizard.metrics', name: 'metrics-json', version: '3.1.2'
+		compile group: 'javax.ws.rs', name: 'javax.ws.rs-api', version: '2.0.1'
+		compile group: 'org.glassfish.jersey.containers', name: 'jersey-container-servlet-core', version: '2.22.2'
+		compile group: 'org.glassfish.jersey.core', name: 'jersey-server', version: '2.22.2'
+		compile group: 'javax.servlet', name: 'javax.servlet-api', version: '3.0.1'
+		//ftp
+		compile group: 'com.jcraft', name: 'jsch', version: '0.1.54'
+		compile group: 'commons-net', name: 'commons-net', version: '3.3'
+		compile group: 'com.amazonaws', name: 'aws-java-sdk', version: '1.11.188'
+		compile group: 'com.esotericsoftware', name: 'minlog', version: '1.3'
+		compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.2'
+		compile group: 'joda-time', name: 'joda-time', version: '2.9.3'
+		
+		//excel
+		compile group: 'org.apache.poi', name: 'poi', version: '3.15'
+		compile group: 'org.apache.poi', name: 'poi-ooxml', version : '3.15'
+		compile group: 'org.apache.xmlbeans', name: 'xmlbeans', version: '2.6.0'
+		compile group: 'org.apache.poi', name: 'poi-ooxml-schemas', version: '3.15'
+		compile group: 'org.apache.commons', name: 'commons-collections4', version: '4.1'
+		
+}
+
+
+test {
+    testLogging.showStandardStreams = true
+}
+
+/*
+-------------------------------------------------------------------------------------------------
+                                      Local Run 
+-------------------------------------------------------------------------------------------------
+*/
+
+task executeLocalJob(dependsOn: ['build', 'classes'], type: JavaExec) {
+	
+	description 'Execute job in local mode'
+   
+    if(project.hasProperty('localjob') && !project.hasProperty('debugJobXML') ){
+        def mainClassName = hydrographExecution
+        def transformFiles = files { file(project.libsDir.path).listFiles() }
+        def customJars = files { file('lib').listFiles() }
+        def customJarsProperties = files('resources')
+        println "determineExecutionType: Executing Local Job"
+        main = mainClassName
+        standardOutput = System.out
+        errorOutput = System.err
+        classpath += customJarsProperties + customJars + transformFiles + configurations.compile
+        args=getArgsForRunJob("ExecuteLocalRun")
+    }
+}
+executeLocalJob.onlyIf {
+    project.hasProperty('jobXML')
+    project.hasProperty('parameterFile')
+    project.hasProperty('localjob');
+}
+
+
+/*
+-------------------------------------------------------------------------------------------------
+                                 Local Run With View Data 
+-------------------------------------------------------------------------------------------------
+*/
+task executeDebugLocal (dependsOn: ['build', 'classes'], type: JavaExec) {
+	
+	description 'Execute job in Local with view data mode'   
+	 
+    if (project.hasProperty('localjob') && project.hasProperty('debugJobXML')){
+        def mainClassName = hydrographExecution
+        def transformFiles = files { file(project.libsDir.path).listFiles() }
+        def customJars = files { file('lib').listFiles() }
+        def customJarsProperties = files('resources')
+		println "determineExecutionType: Executing Local Job with View Data Enabled"
+        main = mainClassName
+        standardOutput = System.out
+        errorOutput = System.err
+        classpath += customJarsProperties + customJars + transformFiles + configurations.compile
+        args=getArgsForRunJob("ExecuteLocalDebugRun")
+    }
+}
+executeDebugLocal.onlyIf {
+    project.hasProperty('jobXML')
+    project.hasProperty('parameterFile')
+    project.hasProperty('localjob')
+    project.hasProperty('debugJobXML')
+    project.hasProperty('basePath');
+}
+
+
+
+/*
+-------------------------------------------------------------------------------------------------
+                                Below task are developed for remote run 
+-------------------------------------------------------------------------------------------------
+*/
+
+
+/*
+-------------------------------------------------------------------------------------------------
+                                  Create directories on remote server  
+-------------------------------------------------------------------------------------------------
+*/
+task createDirectories() {
+	 doLast{
+         	println "createDirectories: Creating directories on remote server"
+ 			def  command="mkdir -p " +properties.remoteDirectory+"/{"+jobXML+","+moveJar+","+moveParameterFile+","+moveExternalFiles+","+moveSubJobFiles+","+moveResourceFile+"}"
+ 			println "Command to create directories on remote server:" + command
+			sshToRemoteServer(host,username,password,command,keyfile,usepassword)
+			
+			createResourceDirectory(moveResourceFile, properties.remoteDirectory)
+		} 
+}
+createDirectories.onlyIf {
+	project.hasProperty('host')
+    project.hasProperty('username')
+    project.hasProperty('password')
+	project.hasProperty('keyfile')
+	project.hasProperty('usepassword')
+    project.hasProperty('jobXML')
+    !project.hasProperty('localjob');
+}
+
+/*
+-------------------------------------------------------------------------------------------------
+                              Securely transfer Jar files to remote server  
+-------------------------------------------------------------------------------------------------
+*/
+task scpJarFiles(dependsOn: ['build']) {
+
+    doLast {
+        println "scpJarFiles: Transferring Jar files to $host"
+        
+        def jarFile
+        def jarName
+        def jarFiles = files {
+            file(project.libsDir.path).listFiles()
+        }
+
+        jarFiles.each {
+            File file ->
+                jarFile = file.absolutePath
+                jarName = file.name
+        	}        
+    try {
+				scpToRemoteServer(jarFile, project.name+"/lib",username,host,password,properties.remoteDirectory,keyfile,usepassword)
+    	    } catch (Exception gradleException) {
+    	     	println 'scpJarFiles: #Gradle failed to execute task#'
+        	    println 'Cause: Failed to transfer lib folder data on remote server'
+        	    gradleException.printStackTrace();
+        	}
+    }
+}
+scpJarFiles.onlyIf {
+	project.hasProperty('host')
+    project.hasProperty('username')
+    project.hasProperty('password') 
+	project.hasProperty('keyfile')
+	project.hasProperty('usepassword')
+    !project.hasProperty('localjob');   
+}
+
+/*
+-------------------------------------------------------------------------------------------------
+                              Securely transfer job XML files to remote server  
+-------------------------------------------------------------------------------------------------
+*/
+task scpJobXML() {
+	  doLast {
+  			println "scpJobXML: Transferring XML to $host"
+
+			scpToRemoteServer(jobXML,project.name+ "/" +getFilePath(jobXML),username,host,password,properties.remoteDirectory,keyfile,usepassword)
+
+	        if(project.hasProperty('debugJobXML')){
+				println "scpJobXML: Transferring view data XML to: $host"
+				scpToRemoteServer(debugJobXML,project.name+ "/" +getFilePath(debugJobXML),username,host,password,properties.remoteDirectory,keyfile,usepassword)
+    		}
+	    }
+}
+scpJobXML.onlyIf {
+    project.hasProperty('host')
+    project.hasProperty('username')
+    project.hasProperty('password') 
+	project.hasProperty('keyfile')
+	project.hasProperty('usepassword')
+    project.hasProperty('jobXML')
+    !project.hasProperty('localjob');
+}
+
+/*
+-------------------------------------------------------------------------------------------------
+                            Securely transfer parameter files to remote server  
+-------------------------------------------------------------------------------------------------
+*/
+task scpParameterFile() {
+		    doLast {
+		    	println "scpParameterFile: Transferring parameter files to $host"
+
+		        try {
+		            def parameterFiles = parameterFile.split(',');
+		            for(int i = 0; i < parameterFiles.length; i++){
+						println "scpParameterFile: copying parameter file: " + parameterFiles[i];             
+		                //println 'copying parameter file: ' + parameterFiles[i];
+		                if(!parameterFiles[i].trim().equals("")){
+		 					scpToRemoteServer( ""+parameterFiles[i]+"",""+project.name+"/param",username,host,password,properties.remoteDirectory,keyfile,usepassword)
+		                  }
+		            }
+		        } catch (Exception gradleException) {
+		        	println 'scpParameterFile: #Gradle failed to execute task#'
+		            println 'Cause: Failed to transfer paramerter files on remote server'
+		            gradleException.printStackTrace();
+		        }
+		    }
+}
+scpParameterFile.onlyIf {
+    project.hasProperty('host')
+    project.hasProperty('username')
+    project.hasProperty('password')
+	project.hasProperty('keyfile')
+	project.hasProperty('usepassword')
+    project.hasProperty('parameterFile')
+    !project.hasProperty('localjob');
+}
+
+/*
+-------------------------------------------------------------------------------------------------
+                        Securely transfer external files to remote server  
+-------------------------------------------------------------------------------------------------
+*/
+task scpExternalFiles() {
+		    doLast {
+			    println "scpExternalFiles: Transferring external files to $host"
+			    
+			    def files=externalFiles;
+				def externalFiles = files.split(",");
+				def sampleMap = [:]
+				externalFiles.each {
+					def fileValue = "${it}"
+					def singleFile = fileValue.split("#");
+					sampleMap.put(singleFile[0],singleFile[1])
+				}
+		
+		    sampleMap.each {
+		       	scpToRemoteServer("${it.value}", getFilePath("${it.key}"),username,host,password,properties.remoteDirectory,keyfile,usepassword)
+		      }//;
+		    } 
+}
+ 
+scpExternalFiles.onlyIf {
+    project.hasProperty('host')
+    project.hasProperty('username')
+    project.hasProperty('password')
+	project.hasProperty('keyfile')
+	project.hasProperty('usepassword')
+    project.hasProperty('externalFiles')
+    !project.hasProperty('localjob');
+
+}
+/*
+-------------------------------------------------------------------------------------------------
+                          Securely transfer subjob files to remote server  
+-------------------------------------------------------------------------------------------------
+*/
+task scpSubJobFiles() {
+		    doLast {
+			    println "scpSubJobFiles: Transferring subjob files to $host"
+			    
+			    def files=subJobFiles;
+				def externalFiles = files.split(",");
+				def sampleMap = [:]
+				externalFiles.each {
+					def fileValue = "${it}"
+					def singleFile = fileValue.split("#");
+					sampleMap.put(singleFile[0],singleFile[1])
+				 }
+		
+		    sampleMap.each {
+		      	 scpToRemoteServer("${it.value}", getFilePath("${it.key}"),username,host,password,properties.remoteDirectory,keyfile,usepassword)
+		      }
+		    } 
+}
+scpExternalFiles.onlyIf {
+    project.hasProperty('host')
+    project.hasProperty('username')
+    project.hasProperty('password')
+	project.hasProperty('keyfile')
+	project.hasProperty('usepassword')
+    project.hasProperty('subJobFiles')
+    !project.hasProperty('localjob');
+
+}
+/*
+-------------------------------------------------------------------------------------------------------------
+             Securely transfer user-functions properties file from project resources folder to remote server  
+-------------------------------------------------------------------------------------------------------------
+*/
+task scpUserFunctionsPropertyFile(dependsOn: ['build']) {
+	doLast {
+	println 'scpUserFunctionsPropertyFile: Transferring resources folder to remote server'
+
+		FileTree resourcesFiles = fileTree (dir: project.projectDir.path+'/resources')
+			try {
+					resourcesFiles.visit { element ->
+						if(!element.file.isDirectory()){
+							def targetDirectory=element.file.getParentFile().getPath().replace( project.projectDir.path , project.name )
+							targetDirectory = targetDirectory.replace("\\","/")
+							println "scpUserFunctionsPropertyFile: Transferring "+ element.file +" to "+ targetDirectory +" directory"
+							scpToRemoteServer( element.file, targetDirectory,username,host,password,properties.remoteDirectory,keyfile,usepassword)
+						}
+					}
+															
+				} catch (Exception gradleException) {
+					println 'scpUserFunctionsPropertyFile: #Gradle failed to execute task#'
+					println 'Cause: Failed to transfer resources folder on remote server'
+					gradleException.printStackTrace();
+        	}
+    }
+}
+scpUserFunctionsPropertyFile.onlyIf {
+    project.hasProperty('host')
+    project.hasProperty('username')
+    project.hasProperty('password')
+	project.hasProperty('keyfile')
+	project.hasProperty('usepassword')
+}
+
+/*
+-------------------------------------------------------------------------------------------------------------
+             Securely transfer jar files from project lib folder to remote server  
+-------------------------------------------------------------------------------------------------------------
+*/
+task scpLibFolderJarFiles(dependsOn: ['build'] ){
+
+doLast {	
+	println 'scpLibFolderJarFiles: Transfer jar files from project lib folder to remote server'
+
+        def otherJarFile
+        def otherJarName
+        def otherJarFiles = files {
+			def path1 =project.projectDir.path+'/lib'
+            file(path1).listFiles()
+        }
+		
+	try {
+			otherJarFiles.each {
+            File file ->
+                otherJarFile = file.absolutePath
+				 println 'Copying ' + file.name
+               	scpToRemoteServer(otherJarFile, project.name+"/lib",username,host,password,properties.remoteDirectory,keyfile,usepassword)
+        	}
+      			
+    	    } catch (Exception gradleException) {
+        	    println 'scpUserFunctionsPropertyFile: #Gradle failed to execute task#'
+        	    println 'Cause: Failed to copy lib folder on remote server'
+        	    gradleException.printStackTrace();
+        	}
+}
+}
+scpLibFolderJarFiles.onlyIf {
+    project.hasProperty('host')
+    project.hasProperty('username')
+    project.hasProperty('password')
+	project.hasProperty('keyfile')
+	project.hasProperty('usepassword')
+}
+
+
+/*
+-------------------------------------------------------------------------------------------------
+                                 Remote Run  
+-------------------------------------------------------------------------------------------------
+*/
+task executeRemoteJob() {
+	if (!project.hasProperty('localjob') && !project.hasProperty('debugJobXML')){
+		doLast {
+	    
+	    	println "determineExecutionType: Executing Remote Job"
+	    	
+	        def jarFile
+	        def jarName
+	 
+	        def jarFiles = files {
+	            file(project.libsDir.path).listFiles()
+	        }
+	
+	        jarFiles.each {
+	            File file ->
+	                jarFile = file.absolutePath
+	                jarName = file.name
+	        }
+	    
+	      /*Code to append projects lib folder jar files to jarFileName*/
+        
+        	def otherJarFile
+        	def otherJarFileName
+       	    def otherJarFileNames = ''
+        
+        	def otherJarFileList = files {
+				file(project.projectDir.path+'/lib').listFiles()
+        	}
+        
+        	otherJarFileList.each	{
+        	File file ->
+        	otherJarFile = file.absolutePath
+        	otherJarFileName =  file.name
+        	otherJarFileNames = otherJarFileNames+ "," + "lib/"+ otherJarFileName 
+        	}
+        	if(otherJarFileName != ''){
+        		jarName= jarName + otherJarFileNames 
+        	}
+        
+	       def parameterFiles = parameterFile.split(',');
+	       def unixParameterFileList = "";
+	       
+	       for(int i = 0; i < parameterFiles.length; i++){
+	        	if(!parameterFiles[i].trim().equals("")){
+	        		def unixParameterFileName = parameterFiles[i].substring(parameterFiles[i].replaceAll("\\\\","/").lastIndexOf("/") + 1);
+	            	unixParameterFileList= unixParameterFileList +  "param/" + unixParameterFileName + ",";
+	         	}
+	        }
+	
+			if(!unixParameterFileList.trim().equals("")){
+				unixParameterFileList=unixParameterFileList.substring(0, unixParameterFileList.length() - 1);
+			}
+	
+	        println "executeRemoteJob: Executing command -cd "+properties.remoteDirectory+"/"+project.name+ " && " + properties.runUtility + " -xmlpath " +jobXML + " -libjars " +properties.remoteDirectory+"/"+project.name+"/lib/" + jarName + " -paramfiles " + unixParameterFileList +" -jobid "+jobId+" -udfpath " + udfpath + " -isexecutiontracking " + isExecutionTracking  +" -trackingclientsocketport " + executionTrackingPort +" -loglevel " + loglevel
+			
+			def command = "cd " +properties.remoteDirectory+"/"+project.name+ " && " + properties.runUtility + " -xmlpath " +jobXML + " -libjars " +properties.remoteDirectory+"/"+project.name+"/lib/" + jarName + " -paramfiles " + unixParameterFileList +" -jobid "+jobId+" -udfpath " + udfpath + " -isexecutiontracking " + isExecutionTracking  +" -trackingclientsocketport " + executionTrackingPort  +" -loglevel " + loglevel
+
+	   		sshToRemoteServer(host,username,password,command,keyfile,usepassword)
+	    }
+	 }
+}
+executeRemoteJob.onlyIf {
+    project.hasProperty('host')
+    project.hasProperty('username')
+    project.hasProperty('password')
+	project.hasProperty('keyfile')
+	project.hasProperty('usepassword')
+    project.hasProperty('jobXML')
+    project.hasProperty('parameterFile')
+    !project.hasProperty('localjob');
+}
+
+/*
+-------------------------------------------------------------------------------------------------
+                              Remote Run With View Data  
+-------------------------------------------------------------------------------------------------
+*/
+task executeDebugRemoteJob() {
+    if (!project.hasProperty('localjob') && project.hasProperty('debugJobXML')){
+		doLast {
+
+	        println "determineExecutionType: Executing Remote Job with View Data Enabled"
+	
+	        def jarFile
+	        def jarName
+	
+	        def jarFiles = files {
+	            file(project.libsDir.path).listFiles()
+	        }
+	
+	        jarFiles.each {
+	            File file ->
+	                jarFile = file.absolutePath
+	                jarName = file.name
+	        }
+			 /*Code to append projects lib folder jar files to jarFileName*/
+        
+		    def otherJarFile
+		    def otherJarFileName
+		    def otherJarFileNames = ''
+		    
+		    def otherJarFileList = files {
+				file(project.projectDir.path+'/lib').listFiles()
+		    }
+		    
+		    otherJarFileList.each	{
+		    	File file ->
+		    	otherJarFile = file.absolutePath
+		    	otherJarFileName =  file.name
+		    	otherJarFileNames = otherJarFileNames+ "," + "lib/"+ otherJarFileName 
+		    }
+		    if(otherJarFileName != ''){
+		    	jarName= jarName + otherJarFileNames 
+		    }
+	
+	        def parameterFiles = parameterFile.split(',');
+	        def unixParameterFileList = "";
+	
+	        for(int i = 0; i < parameterFiles.length; i++){
+	        	if(!parameterFiles[i].trim().equals("")){
+	        		def unixParameterFileName = parameterFiles[i].substring(parameterFiles[i].replaceAll("\\\\","/").lastIndexOf("/") + 1);
+	            	unixParameterFileList= unixParameterFileList + "param/" + unixParameterFileName + ",";
+	         	}
+	        }
+			
+			if(!unixParameterFileList.trim().equals("")){
+				unixParameterFileList=unixParameterFileList.substring(0, unixParameterFileList.length() - 1);
+			}
+	        
+	        def debugXmlFileName = debugJobXML.substring(debugJobXML.lastIndexOf("/") + 1);
+	        def jobId = jobId;
+	        def basePath = basePath;
+	        
+	        println "executeDebugRemoteJob: Executing command -cd "+properties.remoteDirectory+"/"+project.name+ " && " + properties.runUtility + " -xmlpath " +jobXML + " -libjars " +properties.remoteDirectory+"/"+project.name+"/lib/" + jarName + " -paramfiles " + unixParameterFileList+ " -debugxmlpath "+ debugJobXML + " -jobid " + jobId + " -basepath " + basePath + " -udfpath" + udfpath  + " -isexecutiontracking " + isExecutionTracking + " -trackingclientsocketport " + executionTrackingPort + " -loglevel " + loglevel
+	        def command="cd " +properties.remoteDirectory+"/"+project.name+ " && " + properties.runUtility + " -xmlpath " +jobXML + " -libjars " +properties.remoteDirectory+"/"+project.name+"/lib/" + jarName + " -paramfiles " + unixParameterFileList+ " -debugxmlpath "+ debugJobXML + " -jobid " + jobId + " -basepath " + basePath + " -udfpath " + udfpath  + " -isexecutiontracking " + isExecutionTracking + " -trackingclientsocketport " + executionTrackingPort + " -loglevel " + loglevel
+			sshToRemoteServer(host,username,password,command,keyfile,usepassword)
+	    }
+	  }
+}
+executeDebugRemoteJob.onlyIf {
+    project.hasProperty('host')
+    project.hasProperty('username')
+    project.hasProperty('password')
+	project.hasProperty('keyfile')
+	project.hasProperty('usepassword')
+    project.hasProperty('jobXML')
+    project.hasProperty('parameterFile')
+    project.hasProperty('debugJobXML')
+    !project.hasProperty('localjob');
+}
+
+/*
+-------------------------------------------------------------------------------------------------
+                              Kill Remote Job  
+-------------------------------------------------------------------------------------------------
+*/
+task killRemoteJob() {
+	doLast {
+	    if(jobprocessid !=null){
+	    
+			println "scpSubJobFiles: Killing $jobprocessid"
+		
+			def command="sh "+properties.runUtility+" -k " + jobprocessid
+	        sshToRemoteServer(host,username,password,command,keyfile,usepassword)
+	     }
+	}
+}
+killRemoteJob.onlyIf {
+    project.hasProperty('host')
+    project.hasProperty('username')
+    project.hasProperty('password')
+	project.hasProperty('keyfile')
+	project.hasProperty('usepassword')
+    project.hasProperty('jobprocessid');
+}
